@@ -1,21 +1,25 @@
 package main
 
 import (
-	"github.com/GraphZC/go-wireset-gen/internal/command"
+	"github.com/GraphZC/go-wireset-gen/internal/commands"
 	"github.com/GraphZC/go-wireset-gen/internal/handlers"
-	"github.com/GraphZC/go-wireset-gen/internal/services"
+	"github.com/GraphZC/go-wireset-gen/internal/repositories/files"
+	"github.com/GraphZC/go-wireset-gen/internal/services/generator"
 )
 
 func main() {
+	// Initialize repositories
+	fileRepository := files.NewFileRepository()
+
 	// Initialize services
-	fileService := services.NewFileService()
+	generatorService := generator.NewGenerateService(fileRepository)
 
 	// Initialize handlers
-	generateHandler := handlers.NewGenerateHandler(fileService)
+	generateHandler := handlers.NewGenerateHandler(generatorService)
 
 	// Initialize commands
-	rootCmd := command.NewRootCommand()
-	rootCmd.AddCommand(command.NewGenerateCommand(generateHandler))
+	rootCmd := commands.NewRootCommand()
+	rootCmd.AddCommand(commands.NewGenerateCommand(generateHandler))
 
 	// Execute the root command
 	if err := rootCmd.Execute(); err != nil {

@@ -1,26 +1,23 @@
 package handlers
 
 import (
-	"log"
-
-	"github.com/GraphZC/go-wireset-gen/internal/services"
+	"github.com/GraphZC/go-wireset-gen/internal/services/generator"
 )
 
 type GenerateHandler interface {
-	GenerateWireSet() error
+	GenerateWireSet(verbose bool) error
 }
 
 type generateHandlerImpl struct {
-	fileService services.FileService
+	generatorService generator.Service
 }
 
-func NewGenerateHandler(fileService services.FileService) GenerateHandler {
+func NewGenerateHandler(generatorService generator.Service) GenerateHandler {
 	return &generateHandlerImpl{
-		fileService: fileService,
+		generatorService: generatorService,
 	}
 }
 
-func (g *generateHandlerImpl) GenerateWireSet() error {
-	log.Println("Generating wire set...")
-	return nil
+func (g *generateHandlerImpl) GenerateWireSet(verbose bool) error {
+	return g.generatorService.GenerateWireSet(verbose)
 }

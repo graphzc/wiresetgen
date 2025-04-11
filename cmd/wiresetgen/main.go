@@ -1,10 +1,10 @@
 package main
 
 import (
-	"github.com/GraphZC/go-wireset-gen/internal/commands"
-	"github.com/GraphZC/go-wireset-gen/internal/handlers"
-	"github.com/GraphZC/go-wireset-gen/internal/repositories/files"
-	"github.com/GraphZC/go-wireset-gen/internal/services/generator"
+	"github.com/graphzc/wiresetgen/internal/commands"
+	"github.com/graphzc/wiresetgen/internal/handlers"
+	"github.com/graphzc/wiresetgen/internal/repositories/files"
+	"github.com/graphzc/wiresetgen/internal/services/generator"
 )
 
 func main() {

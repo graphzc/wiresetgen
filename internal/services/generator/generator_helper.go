@@ -5,7 +5,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/GraphZC/go-wireset-gen/internal/models"
+	"github.com/graphzc/wiresetgen/internal/models"
 )
 
 // For get the module name from go.mod file
@@ -88,7 +88,7 @@ func extractSetInfo(moduleName string, filePath string, fileContent string) []*m
 	return setInfos
 }
 
-func extractWireGenLocation(filePath string, fileContent string) *models.WireGenInfo {
+func extractWireGenLocation(filePath string, fileContent string) *models.WireGenLocation {
 	lines := strings.Split(fileContent, "\n")
 
 	isFound := false
@@ -107,7 +107,7 @@ func extractWireGenLocation(filePath string, fileContent string) *models.WireGen
 			if len(packageParts) > 1 {
 				packageParts = strings.Split(packageParts[1], " ")
 				if len(packageParts) > 1 {
-					return &models.WireGenInfo{
+					return &models.WireGenLocation{
 						PackageName:   strings.TrimSpace(packageParts[1]),
 						DirectoryPath: path.Dir(filePath),
 					}

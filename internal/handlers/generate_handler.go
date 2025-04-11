@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"github.com/GraphZC/go-wireset-gen/internal/services/generator"
+	"github.com/graphzc/wiresetgen/internal/services/generator"
 )
 
 type GenerateHandler interface {

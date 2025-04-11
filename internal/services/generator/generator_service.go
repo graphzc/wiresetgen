@@ -8,9 +8,9 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/GraphZC/go-wireset-gen/internal/models"
-	"github.com/GraphZC/go-wireset-gen/internal/repositories/files"
-	"github.com/GraphZC/go-wireset-gen/internal/templates"
+	"github.com/graphzc/wiresetgen/internal/models"
+	"github.com/graphzc/wiresetgen/internal/repositories/files"
+	"github.com/graphzc/wiresetgen/internal/templates"
 	"github.com/sirupsen/logrus"
 )
 
@@ -54,7 +54,7 @@ func (g *generatorServiceImpl) GenerateWireSet(verbose bool) error {
 	}
 
 	allSetInfo := make([]*models.WireSetInfo, 0)
-	allWireGenInfo := make([]*models.WireGenInfo, 0)
+	allWireGenLocation := make([]*models.WireGenLocation, 0)
 
 	for _, file := range goFiles {
 		fileContent, err := g.fileRepository.ReadFile(file)
@@ -62,9 +62,9 @@ func (g *generatorServiceImpl) GenerateWireSet(verbose bool) error {
 			return err
 		}
 
-		extractedWireGenInfo := extractWireGenLocation(file, string(fileContent))
-		if extractedWireGenInfo != nil {
-			allWireGenInfo = append(allWireGenInfo, extractedWireGenInfo)
+		extractedWireGenLocation := extractWireGenLocation(file, string(fileContent))
+		if extractedWireGenLocation != nil {
+			allWireGenLocation = append(allWireGenLocation, extractedWireGenLocation)
 
 			if verbose {
 				logrus.Info("Found wire gen file at", file)
@@ -128,9 +128,9 @@ func (g *generatorServiceImpl) GenerateWireSet(verbose bool) error {
 		setInfoMap[setInfo.SetName] = append(setInfoMap[setInfo.SetName], setInfo)
 	}
 
-	for _, wireGenInfo := range allWireGenInfo {
+	for _, wireGenLocation := range allWireGenLocation {
 		if verbose {
-			logrus.Infof("Generating wire set for %s\n", wireGenInfo.DirectoryPath)
+			logrus.Infof("Generating wire set for %s\n", wireGenLocation.DirectoryPath)
 		}
 
 		wireSetGenTemplate := templates.WireSetGenTemplate
@@ -161,22 +161,21 @@ func (g *generatorServiceImpl) GenerateWireSet(verbose bool) error {
 
 		var buf bytes.Buffer
 		if err = tmpl.Execute(&buf, models.WireSetGenTemplateModel{
-			PackageName: wireGenInfo.PackageName,
+			PackageName: wireGenLocation.PackageName,
 			Imports:     imports,
 			WireSets:    wireSets,
 		}); err != nil {
 			return err
 		}
 
-		logrus.Infoln("wireGenInfo", wireGenInfo)
 		// Write the generated file
-		err = g.fileRepository.WriteFile(wireGenInfo.DirectoryPath, "wire_set_gen.go", string(buf.Bytes()))
+		err = g.fileRepository.WriteFile(wireGenLocation.DirectoryPath, "wire_set_gen.go", buf.String())
 		if err != nil {
 			return err
 		}
 
 		if verbose {
-			logrus.Infof("Generated wire set file at %s/wire_set_gen.go\n", wireGenInfo.DirectoryPath)
+			logrus.Infof("Generated wire set file at %s/wire_set_gen.go\n", wireGenLocation.DirectoryPath)
 		}
 	}
 

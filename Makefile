@@ -10,3 +10,6 @@ build-and-install: build
 	@echo 'Installing the project...'
 	mv wiresetgen ~/go/bin
 	@echo 'Installation complete!'
+
+fmt:
+	go fmt ./...

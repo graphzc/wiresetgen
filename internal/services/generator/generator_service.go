@@ -9,52 +9,51 @@ import (
 	"text/template"
 
 	"github.com/graphzc/wiresetgen/internal/models"
-	"github.com/graphzc/wiresetgen/internal/repositories/files"
+	fileRepo "github.com/graphzc/wiresetgen/internal/repositories/files"
 	"github.com/graphzc/wiresetgen/internal/templates"
 	"github.com/sirupsen/logrus"
 )
 
-var (
-	ErrIsNotProjectRoot = errors.New("is not in project root directory")
-	ErrInvalidGoModFile = errors.New("invalid go.mod file")
-)
 
 type Service interface {
 	GenerateWireSet(verbose bool) error
 }
 
 type generatorServiceImpl struct {
-	fileRepository files.Repository
+	fileRepository fileRepo.Repository
 }
 
-func NewGenerateService(fileRepository files.Repository) Service {
+func NewGenerateService(fileRepository fileRepo.Repository) Service {
 	return &generatorServiceImpl{
 		fileRepository: fileRepository,
 	}
 }
 
 func (g *generatorServiceImpl) GenerateWireSet(verbose bool) error {
+	// Check if the current directory is a Go project root
 	goModFile, err := g.fileRepository.GetGoModFile()
 	if err != nil {
-		if errors.Is(err, files.ErrFileNotFound) {
+		if errors.Is(err, fileRepo.ErrFileNotFound) {
 			return ErrIsNotProjectRoot
 		}
 
 		return err
 	}
 
-	moduleName, err := getModuleName(string(goModFile))
+	// Try to read module name from go.mod file
+	moduleName, err := getModuleName(goModFile)
 	if err != nil {
 		return ErrInvalidGoModFile
 	}
 
+	// List all Go files in the project
 	goFiles, err := g.fileRepository.ListAllGoFiles()
 	if err != nil {
 		return err
 	}
 
-	allSetInfo := make([]*models.WireSetInfo, 0)
-	allWireGenLocation := make([]*models.WireGenLocation, 0)
+	allSetInfo := make([]*models.WireSetInfo, 0, 64)
+	allWireGenLocation := make([]*models.WireGenLocation, 0, 4)
 
 	for _, file := range goFiles {
 		fileContent, err := g.fileRepository.ReadFile(file)
@@ -62,7 +61,10 @@ func (g *generatorServiceImpl) GenerateWireSet(verbose bool) error {
 			return err
 		}
 
-		extractedWireGenLocation := extractWireGenLocation(file, string(fileContent))
+		extractedWireGenLocation, err := extractWireGenLocation(file, string(fileContent))
+		if err != nil {
+			return err
+		}
 		if extractedWireGenLocation != nil {
 			allWireGenLocation = append(allWireGenLocation, extractedWireGenLocation)
 
@@ -70,11 +72,11 @@ func (g *generatorServiceImpl) GenerateWireSet(verbose bool) error {
 				logrus.Info("Found wire gen file at", file)
 			}
 
-			// If this fils is wire gen file, skip extracting set info
+			// If this file is wire gen file, skip extracting set info
 			continue
 		}
 
-		extractedSetInfos := extractSetInfo(moduleName, file, string(fileContent))
+		extractedSetInfos := extractSetInfo(moduleName, file, fileContent)
 		if len(extractedSetInfos) > 0 {
 			if verbose {
 				for _, setInfo := range extractedSetInfos {

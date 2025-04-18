@@ -1,0 +1,12 @@
+outpkg: "mock_{{.PackageName}}"
+dir: "{{.InterfaceDir}}/mock/"
+mockname: "{{.InterfaceName}}"
+filename: "mock_{{ .InterfaceName | snakecase }}.go"
+resolve-type-alias: False
+disable-version-string: True
+issue-845-fix: True
+packages:
+  github.com/graphzc/wiresetgen:
+    config:
+      all: true
+      recursive: true

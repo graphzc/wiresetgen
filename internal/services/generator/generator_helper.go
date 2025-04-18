@@ -1,11 +1,12 @@
 package generator
 
 import (
+	"fmt"
 	"os"
 	"path"
 	"strings"
 
-	"github.com/GraphZC/go-wireset-gen/internal/models"
+	"github.com/graphzc/wiresetgen/internal/models"
 )
 
 // For get the module name from go.mod file
@@ -20,6 +21,34 @@ func getModuleName(goModFile string) (string, error) {
 		}
 	}
 	return "", ErrInvalidGoModFile
+}
+
+// For extract string from package line
+// Return packageName, nil when found package name
+// Return nil, err when has an error
+// Return nil, nil when no package in that line
+func extractPackageName(line string) (*string, error) {
+	line = strings.TrimSpace(line)
+
+	if line == "" {
+		return nil, nil
+	}
+
+	if !strings.HasPrefix(line, "package") {
+		return nil, nil
+	}
+
+	packageParts := strings.Fields(line)
+
+	if len(packageParts) < 2 {
+		return nil, ErrInvalidPackageName
+	}
+
+	if len(packageParts) > 2 && !strings.HasPrefix(packageParts[2], "//") {
+		return nil, ErrInvalidPackageName
+	}
+
+	return &packageParts[1], nil
 }
 
 // For indicates @WireSet("name") annotation and extracts the data
@@ -88,7 +117,11 @@ func extractSetInfo(moduleName string, filePath string, fileContent string) []*m
 	return setInfos
 }
 
-func extractWireGenLocation(filePath string, fileContent string) *models.WireGenInfo {
+// For extract the wiregen location from the file
+// Return the wiregen location when found
+// Return nil, nil when no wiregen location in that file
+// Return nil, err when has an error
+func extractWireGenLocation(filePath string, fileContent string) (*models.WireGenLocation, error) {
 	lines := strings.Split(fileContent, "\n")
 
 	isFound := false
@@ -96,25 +129,29 @@ func extractWireGenLocation(filePath string, fileContent string) *models.WireGen
 	for i := range lines {
 		line := strings.TrimSpace(lines[i])
 
-		if strings.Contains(line, "//go:build wireinject") {
+		if strings.HasPrefix(line, "//go:build wireinject") {
 			isFound = true
 			continue
 		}
 
 		if isFound {
-			strings.Contains(line, "package")
-			packageParts := strings.Split(line, "package")
-			if len(packageParts) > 1 {
-				packageParts = strings.Split(packageParts[1], " ")
-				if len(packageParts) > 1 {
-					return &models.WireGenInfo{
-						PackageName:   strings.TrimSpace(packageParts[1]),
-						DirectoryPath: path.Dir(filePath),
-					}
-				}
+			packageName, err := extractPackageName(line)
+			if err != nil {
+				return nil, err
+			}
+
+			if packageName != nil {
+				return &models.WireGenLocation{
+					PackageName:   *packageName,
+					DirectoryPath: path.Dir(filePath),
+				}, nil
 			}
 		}
 	}
 
-	return nil
+	if isFound {
+		return nil, fmt.Errorf("no package in wiregen file: %s", filePath)
+	}
+
+	return nil, nil
 }

@@ -8,53 +8,52 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/GraphZC/go-wireset-gen/internal/models"
-	"github.com/GraphZC/go-wireset-gen/internal/repositories/files"
-	"github.com/GraphZC/go-wireset-gen/internal/templates"
+	"github.com/graphzc/wiresetgen/internal/models"
+	fileRepo "github.com/graphzc/wiresetgen/internal/repositories/files"
+	"github.com/graphzc/wiresetgen/internal/templates"
 	"github.com/sirupsen/logrus"
 )
 
-var (
-	ErrIsNotProjectRoot = errors.New("is not in project root directory")
-	ErrInvalidGoModFile = errors.New("invalid go.mod file")
-)
 
 type Service interface {
 	GenerateWireSet(verbose bool) error
 }
 
 type generatorServiceImpl struct {
-	fileRepository files.Repository
+	fileRepository fileRepo.Repository
 }
 
-func NewGenerateService(fileRepository files.Repository) Service {
+func NewGenerateService(fileRepository fileRepo.Repository) Service {
 	return &generatorServiceImpl{
 		fileRepository: fileRepository,
 	}
 }
 
 func (g *generatorServiceImpl) GenerateWireSet(verbose bool) error {
+	// Check if the current directory is a Go project root
 	goModFile, err := g.fileRepository.GetGoModFile()
 	if err != nil {
-		if errors.Is(err, files.ErrFileNotFound) {
+		if errors.Is(err, fileRepo.ErrFileNotFound) {
 			return ErrIsNotProjectRoot
 		}
 
 		return err
 	}
 
-	moduleName, err := getModuleName(string(goModFile))
+	// Try to read module name from go.mod file
+	moduleName, err := getModuleName(goModFile)
 	if err != nil {
 		return ErrInvalidGoModFile
 	}
 
+	// List all Go files in the project
 	goFiles, err := g.fileRepository.ListAllGoFiles()
 	if err != nil {
 		return err
 	}
 
-	allSetInfo := make([]*models.WireSetInfo, 0)
-	allWireGenInfo := make([]*models.WireGenInfo, 0)
+	allSetInfo := make([]*models.WireSetInfo, 0, 64)
+	allWireGenLocation := make([]*models.WireGenLocation, 0, 4)
 
 	for _, file := range goFiles {
 		fileContent, err := g.fileRepository.ReadFile(file)
@@ -62,19 +61,22 @@ func (g *generatorServiceImpl) GenerateWireSet(verbose bool) error {
 			return err
 		}
 
-		extractedWireGenInfo := extractWireGenLocation(file, string(fileContent))
-		if extractedWireGenInfo != nil {
-			allWireGenInfo = append(allWireGenInfo, extractedWireGenInfo)
+		extractedWireGenLocation, err := extractWireGenLocation(file, string(fileContent))
+		if err != nil {
+			return err
+		}
+		if extractedWireGenLocation != nil {
+			allWireGenLocation = append(allWireGenLocation, extractedWireGenLocation)
 
 			if verbose {
 				logrus.Info("Found wire gen file at", file)
 			}
 
-			// If this fils is wire gen file, skip extracting set info
+			// If this file is wire gen file, skip extracting set info
 			continue
 		}
 
-		extractedSetInfos := extractSetInfo(moduleName, file, string(fileContent))
+		extractedSetInfos := extractSetInfo(moduleName, file, fileContent)
 		if len(extractedSetInfos) > 0 {
 			if verbose {
 				for _, setInfo := range extractedSetInfos {
@@ -128,9 +130,9 @@ func (g *generatorServiceImpl) GenerateWireSet(verbose bool) error {
 		setInfoMap[setInfo.SetName] = append(setInfoMap[setInfo.SetName], setInfo)
 	}
 
-	for _, wireGenInfo := range allWireGenInfo {
+	for _, wireGenLocation := range allWireGenLocation {
 		if verbose {
-			logrus.Infof("Generating wire set for %s\n", wireGenInfo.DirectoryPath)
+			logrus.Infof("Generating wire set for %s\n", wireGenLocation.DirectoryPath)
 		}
 
 		wireSetGenTemplate := templates.WireSetGenTemplate
@@ -161,22 +163,21 @@ func (g *generatorServiceImpl) GenerateWireSet(verbose bool) error {
 
 		var buf bytes.Buffer
 		if err = tmpl.Execute(&buf, models.WireSetGenTemplateModel{
-			PackageName: wireGenInfo.PackageName,
+			PackageName: wireGenLocation.PackageName,
 			Imports:     imports,
 			WireSets:    wireSets,
 		}); err != nil {
 			return err
 		}
 
-		logrus.Infoln("wireGenInfo", wireGenInfo)
 		// Write the generated file
-		err = g.fileRepository.WriteFile(wireGenInfo.DirectoryPath, "wire_set_gen.go", string(buf.Bytes()))
+		err = g.fileRepository.WriteFile(wireGenLocation.DirectoryPath, "wire_set_gen.go", buf.String())
 		if err != nil {
 			return err
 		}
 
 		if verbose {
-			logrus.Infof("Generated wire set file at %s/wire_set_gen.go\n", wireGenInfo.DirectoryPath)
+			logrus.Infof("Generated wire set file at %s/wire_set_gen.go\n", wireGenLocation.DirectoryPath)
 		}
 	}
 

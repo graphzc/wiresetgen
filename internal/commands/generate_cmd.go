@@ -1,7 +1,7 @@
 package commands
 
 import (
-	"github.com/GraphZC/go-wireset-gen/internal/handlers"
+	"github.com/graphzc/wiresetgen/internal/handlers"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )

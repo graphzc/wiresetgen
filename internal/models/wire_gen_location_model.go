@@ -1,6 +1,6 @@
 package models
 
-type WireGenInfo struct {
+type WireGenLocation struct {
 	PackageName   string
 	DirectoryPath string
 }

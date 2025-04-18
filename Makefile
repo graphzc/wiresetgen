@@ -1,12 +1,20 @@
-get-dev-alias:
-	@echo 'alias wiresetgen="go run cmd/wiresetgen/main.go"'
-
 build:
 	@echo 'Building the project...'
 	@go build -o wiresetgen cmd/wiresetgen/main.go
 	@echo 'Build complete!'
 
-build-and-install: build
+install:
 	@echo 'Installing the project...'
-	mv wiresetgen ~/go/bin
-	@echo 'Installation complete!'
+	go install ./cmd/wiresetgen
+	@echo 'Install complete!'
+	@echo 'You can now run wiresetgen from anywhere!'
+
+fmt:
+	@echo 'Formatting the code...'
+	go fmt ./...
+	@echo 'Formatting complete!'
+
+test:
+	@echo 'Running tests...'
+	go test ./...
+	@echo 'Tests complete!'

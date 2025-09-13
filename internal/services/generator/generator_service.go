@@ -14,7 +14,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-
 type Service interface {
 	GenerateWireSet(verbose bool) error
 }
@@ -148,7 +147,7 @@ func (g *generatorServiceImpl) GenerateWireSet(verbose bool) error {
 			}
 
 			for _, info := range setInfos {
-				wireSetsMap[setName].FuncPath = append(wireSetsMap[setName].FuncPath, fmt.Sprintf("%s.%s", info.PackageName, info.FunctionName))
+				wireSetsMap[setName].FuncPath = append(wireSetsMap[setName].FuncPath, fmt.Sprintf("%s.%s", importMap[info.ImportPath], info.FunctionName))
 			}
 		}
 

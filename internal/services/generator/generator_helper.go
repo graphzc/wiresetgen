@@ -2,8 +2,8 @@ package generator
 
 import (
 	"fmt"
-	"os"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/graphzc/wiresetgen/internal/models"
@@ -98,11 +98,12 @@ func extractSetInfo(moduleName string, filePath string, fileContent string) []*m
 			setInfo.PackageName = packageName
 
 			// Set the file path
-			// Cut the latest / section from the file path
-			pathParts := strings.Split(filePath, string(os.PathSeparator))
+			// Cut the latest path separator section from the file path
+			pathParts := strings.Split(filePath, string(filepath.Separator))
 
 			if len(pathParts) > 0 {
 				pathParts = pathParts[:len(pathParts)-1]
+				// Convert back to import path format (always use forward slashes for Go imports)
 				cuttedFilePath := strings.Join(pathParts, "/")
 
 				fullImportPath := path.Join(moduleName, cuttedFilePath)
@@ -143,7 +144,7 @@ func extractWireGenLocation(filePath string, fileContent string) (*models.WireGe
 			if packageName != nil {
 				return &models.WireGenLocation{
 					PackageName:   *packageName,
-					DirectoryPath: path.Dir(filePath),
+					DirectoryPath: filepath.Dir(filePath),
 				}, nil
 			}
 		}

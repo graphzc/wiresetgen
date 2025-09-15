@@ -2,10 +2,10 @@ package files
 
 import (
 	"os"
-	"path"
+	"path/filepath"
 )
 
-const BASE_DIR = "./"
+const BASE_DIR = "."
 
 type Repository interface {
 	GetGoModFile() (string, error)
@@ -33,7 +33,7 @@ func (f *repositoryImpl) ReadFile(filePath string) (string, error) {
 }
 
 func (f *repositoryImpl) GetGoModFile() (string, error) {
-	return f.ReadFile(path.Join(BASE_DIR, "go.mod"))
+	return f.ReadFile(filepath.Join(BASE_DIR, "go.mod"))
 }
 
 func (f *repositoryImpl) ListAllGoFiles() ([]string, error) {
@@ -50,10 +50,10 @@ func (f *repositoryImpl) ListAllGoFiles() ([]string, error) {
 		}
 
 		for _, file := range files {
-			filePath := path.Join(currentDir, file.Name())
+			filePath := filepath.Join(currentDir, file.Name())
 			if file.IsDir() {
 				pendingDirectory = append(pendingDirectory, filePath)
-			} else if path.Ext(file.Name()) == ".go" {
+			} else if filepath.Ext(file.Name()) == ".go" {
 				goFiles = append(goFiles, filePath)
 			}
 		}
@@ -71,7 +71,7 @@ func (f *repositoryImpl) WriteFile(directory string, fileName string, data strin
 		return err
 	}
 	// Create the file path
-	filePath := path.Join(directory, fileName)
+	filePath := filepath.Join(directory, fileName)
 
 	return os.WriteFile(filePath, dataBytes, 0644)
 }
